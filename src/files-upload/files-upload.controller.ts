@@ -2,9 +2,6 @@ import 'multer';
 
 import {
   Controller,
-  FileTypeValidator,
-  MaxFileSizeValidator,
-  ParseFilePipe,
   Post,
   UploadedFile,
   UploadedFiles,
@@ -13,34 +10,20 @@ import {
 
 import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 
+import { createParseFilePipe } from '../common/files/file-validation-factory';
+
 @Controller('files-upload')
 export class FilesUploadController {
   @Post('/single')
   @UseInterceptors(
     FileInterceptor('file', {
       limits: {
-        fileSize: 1024 * 1024 * 5,
+        fileSize: 5 * 1024 * 1024,
       },
     }),
   )
   uploadFile(
-    @UploadedFile(
-      new ParseFilePipe({
-        validators: [
-          new MaxFileSizeValidator({
-            maxSize: 200,
-            message: (maxSize) =>
-              `File size should not exceed ${maxSize} bytes`,
-          }),
-
-          new FileTypeValidator({
-            fileType: /(jpg|jpeg|png)$/,
-          }),
-        ],
-        errorHttpStatusCode: 422,
-        exceptionFactory: (error) => new Error(`Custom error: ${error}`),
-      }),
-    )
+    @UploadedFile(createParseFilePipe(5 * 1024 * 1024, /^image\/(jpeg|png)$/))
     file: Express.Multer.File,
   ) {
     return file;
@@ -50,11 +33,14 @@ export class FilesUploadController {
   @UseInterceptors(
     FilesInterceptor('files', 5, {
       limits: {
-        fileSize: 1024 * 1024 * 5,
+        fileSize: 5 * 1024 * 1024,
       },
     }),
   )
-  uploadMultipleFiles(@UploadedFiles() files: Express.Multer.File[]) {
+  uploadMultipleFiles(
+    @UploadedFiles(createParseFilePipe(5 * 1024 * 1024, /^image\/(jpeg|png)$/))
+    files: Express.Multer.File[],
+  ) {
     return files;
   }
 }
